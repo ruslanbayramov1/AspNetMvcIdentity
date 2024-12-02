@@ -1,0 +1,25 @@
+# ASP.NET
+appsettings.Development.json
+/appsettings.Development.json
+bin/
+obj/
+# User-specific files
+.vs/
+.idea/
+# Windows Installer files
+*.cab
+*.msi
+*.msm
+*.msp
+# Windows Installer files
+*.log
+# Rider project files
+.idea/
+# Visual Studio for Mac
+.vscode/
+# .NET Core SDK files
+project.lock.json
+project.fragment.lock.json
+artifacts/
+# ASP.NET temporary files
+web.config
