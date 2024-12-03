@@ -1,7 +1,10 @@
-﻿using AspNetIdentity.Models;
+﻿using AspNetIdentity.Enums;
+using AspNetIdentity.Extensions;
+using AspNetIdentity.Models;
 using AspNetIdentity.ViewModels.Auths;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace AspNetIdentity.Controllers;
 
@@ -45,10 +48,16 @@ public class AccountController : Controller
             {
                 ModelState.AddModelError("", err.Description);
             }
+            return View();
         }
 
-        if (!ModelState.IsValid)
+        var roleRes = await _userManager.AddToRoleAsync(user, Roles.User.GetRole());
+        if (!roleRes.Succeeded)
         {
+            foreach (var err in roleRes.Errors)
+            {
+                ModelState.AddModelError("", err.Description);
+            }
             return View();
         }
 
@@ -56,7 +65,7 @@ public class AccountController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> Login(LoginVM vm)
+    public async Task<IActionResult> Login(LoginVM vm, string? returnUrl = null)
     {
         if (!ModelState.IsValid)
         {
@@ -66,20 +75,36 @@ public class AccountController : Controller
         User? user = await _userManager.FindByNameAsync(vm.Username);
         if (user == null)
         {
-            ModelState.AddModelError("", "Username not exists");
+            ModelState.AddModelError("", "Username or password is wrong");
             return View();
         }
 
-        var res = await _userManager.CheckPasswordAsync(user, vm.Password);
+        var res = await _signInManager.PasswordSignInAsync(user, vm.Password, vm.RememberMe, true);
 
-        if (!res)
+        if (!res.Succeeded)
         {
-            ModelState.AddModelError("", "Password is wrong");
+            if (res.IsNotAllowed)
+            {
+                ModelState.AddModelError("", "Username or password is wrong");
+            }
+            else if (res.IsLockedOut)
+            {
+                ModelState.AddModelError("", $"Wait until {user.LockoutEnd!.Value}");
+            }
             return View();
         }
 
-        await _signInManager.SignInAsync(user, isPersistent: false);
+        if (!string.IsNullOrWhiteSpace(returnUrl))
+        { 
+            return LocalRedirect(returnUrl);
+        }
 
+        return RedirectToAction("Index", "Home");
+    }
+
+    public async Task<IActionResult> Logout()
+    {
+        await _signInManager.SignOutAsync();
         return RedirectToAction("Index", "Home");
     }
 }

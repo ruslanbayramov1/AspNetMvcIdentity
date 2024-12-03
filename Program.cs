@@ -1,4 +1,5 @@
 using AspNetIdentity.Contexts;
+using AspNetIdentity.Extensions;
 using AspNetIdentity.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -27,9 +28,19 @@ namespace AspNetIdentity
                 opt.SignIn.RequireConfirmedAccount = false;
                 opt.SignIn.RequireConfirmedEmail = false;
                 opt.SignIn.RequireConfirmedPhoneNumber = false;
+                opt.Lockout.MaxFailedAccessAttempts = 3;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
             })
                 .AddEntityFrameworkStores<AppDbContext>()
                 .AddDefaultTokenProviders();
+
+            // 1. if user is not authenticated, it automatically redirects to login path
+            // 2. if user is authenticated but still dont have acces to some features, AccessDeniedPath redirects to specified path
+            builder.Services.ConfigureApplicationCookie(opt =>
+            {
+                opt.LoginPath = "/Account/Login";
+                opt.AccessDeniedPath = "/Denied";
+            });
 
             builder.Services.AddControllersWithViews();
 
@@ -47,6 +58,22 @@ namespace AspNetIdentity
             app.UseRouting();
 
             app.UseAuthorization();
+            app.UseCustomUserDatas();
+
+            app.MapControllerRoute(
+                name: "login",
+                pattern: "login", new
+                {
+                    Controller="Account",
+                    Action="Login"
+                });
+
+            app.MapControllerRoute(
+                name: "register",
+                pattern: "register", new {
+                    Controller="Account",
+                    Action="Register"
+                });
 
             app.MapControllerRoute(
                 name: "default",
